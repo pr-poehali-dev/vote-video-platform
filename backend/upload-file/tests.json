@@ -1,0 +1,16 @@
+{
+  "tests": [{
+    "name": "Test video URL save",
+    "method": "POST",
+    "path": "/",
+    "body": {
+      "fileDataUrl": "data:video/mp4;base64,test",
+      "videoId": 1
+    },
+    "expectedStatus": 200,
+    "expectedBody": {
+      "success": true
+    },
+    "bodyMatcher": "partial"
+  }]
+}

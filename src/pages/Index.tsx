@@ -58,9 +58,13 @@ const Index = () => {
       data.videos.forEach((video: Video) => {
         const localVideo = localStorage.getItem(`video_${video.id}`);
         if (localVideo) {
+          console.log(`Видео ${video.id}: загружено из localStorage (${localVideo.length} символов)`);
           urls[video.id] = localVideo;
         } else if (video.video_url) {
+          console.log(`Видео ${video.id}: загружено из базы данных (${video.video_url.length} символов)`);
           urls[video.id] = video.video_url;
+        } else {
+          console.log(`Видео ${video.id}: URL не найден`);
         }
       });
       setVideoUrls(urls);
@@ -156,12 +160,12 @@ const Index = () => {
           setVideoUrls(prev => ({ ...prev, [videoId]: base64Data }));
           localStorage.setItem(`video_${videoId}`, base64Data);
 
-          const uploadResponse = await fetch('https://functions.poehali.dev/ec3697a9-82b5-41ec-9e8f-54283bc7017c', {
+          const uploadResponse = await fetch('https://functions.poehali.dev/8d0d0014-5e4b-4a12-a934-dacbc6a832bb', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               videoId,
-              videoUrl: base64Data
+              fileDataUrl: base64Data
             })
           });
 
