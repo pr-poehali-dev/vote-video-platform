@@ -191,17 +191,17 @@ const Index = () => {
                       <Button
                         onClick={() => handleVote(video.id)}
                         disabled={hasVoted || isLoading}
-                        className="w-full"
+                        className="w-full bg-primary hover:bg-primary/90 text-white font-bold text-lg py-6 shadow-lg hover:shadow-xl transition-all hover:scale-105"
                         size="lg"
                       >
                         {hasVoted ? (
                           <>
-                            <Icon name="Check" size={20} className="mr-2" />
+                            <Icon name="Check" size={24} className="mr-2" />
                             Вы проголосовали
                           </>
                         ) : (
                           <>
-                            <Icon name="ThumbsUp" size={20} className="mr-2" />
+                            <Icon name="ThumbsUp" size={24} className="mr-2" />
                             Голосовать
                           </>
                         )}
