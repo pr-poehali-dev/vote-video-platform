@@ -40,6 +40,8 @@ const Index = () => {
   const [videoUrls, setVideoUrls] = useState<Record<number, string>>({});
   const [loadingVideo, setLoadingVideo] = useState<number | null>(null);
   const [videoProgress, setVideoProgress] = useState<Record<number, number>>({});
+  const [showAdmin, setShowAdmin] = useState(false);
+  const [uploadingVideo, setUploadingVideo] = useState<number | null>(null);
   const { toast } = useToast();
   const deviceId = generateDeviceId();
 
@@ -68,6 +70,14 @@ const Index = () => {
     fetchVotingData();
     const voted = localStorage.getItem('hasVoted');
     if (voted === 'true') setHasVoted(true);
+    
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'A') {
+        setShowAdmin(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
   }, []);
 
   const handleVote = async (videoChoice: number) => {
@@ -122,6 +132,47 @@ const Index = () => {
     return Math.round((votes / total) * 100);
   };
 
+  const handleVideoUpload = async (videoId: number, file: File) => {
+    if (!file.type.startsWith('video/')) {
+      toast({
+        title: 'Ошибка',
+        description: 'Пожалуйста, выберите видео файл',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setUploadingVideo(videoId);
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('videoId', videoId.toString());
+
+    try {
+      const response = await fetch(`${API_URL}/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        toast({
+          title: 'Успех!',
+          description: 'Видео успешно загружено',
+        });
+        await fetchVotingData();
+      } else {
+        throw new Error('Upload failed');
+      }
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось загрузить видео',
+        variant: 'destructive',
+      });
+    } finally {
+      setUploadingVideo(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background relative">
       <div 
@@ -166,6 +217,16 @@ const Index = () => {
               >
                 О проекте
               </button>
+              {showAdmin && (
+                <button
+                  onClick={() => setActiveSection('admin')}
+                  className={`text-sm font-medium transition-colors hover:text-primary ${
+                    activeSection === 'admin' ? 'text-primary' : 'text-muted-foreground'
+                  }`}
+                >
+                  Админ
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -466,6 +527,91 @@ const Index = () => {
               <Button onClick={() => setActiveSection('main')} size="lg">
                 К голосованию
                 <Icon name="ChevronRight" size={20} className="ml-2" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {activeSection === 'admin' && showAdmin && (
+          <div className="animate-fade-in max-w-4xl mx-auto">
+            <div className="text-center mb-12">
+              <h2 className="text-4xl font-bold mb-4 font-['Montserrat']">
+                Панель администратора
+              </h2>
+              <p className="text-muted-foreground">Загрузите видео файлы для голосования</p>
+            </div>
+
+            {votingData && (
+              <div className="grid md:grid-cols-2 gap-8">
+                {votingData.videos.map((video) => (
+                  <Card key={video.id} className="p-6">
+                    <h3 className="font-bold text-xl mb-4">{video.title}</h3>
+                    <p className="text-muted-foreground mb-6">{video.description}</p>
+                    
+                    {video.thumbnail && (
+                      <div className="mb-4">
+                        <img 
+                          src={video.thumbnail} 
+                          alt={video.title}
+                          className="w-full aspect-video object-cover rounded-lg"
+                        />
+                      </div>
+                    )}
+
+                    <div className="space-y-4">
+                      <div>
+                        <label 
+                          htmlFor={`video-upload-${video.id}`}
+                          className="block w-full cursor-pointer"
+                        >
+                          <div className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                            uploadingVideo === video.id 
+                              ? 'border-primary bg-primary/5' 
+                              : 'border-muted hover:border-primary'
+                          }`}>
+                            {uploadingVideo === video.id ? (
+                              <div className="flex flex-col items-center gap-2">
+                                <Icon name="Loader2" size={32} className="animate-spin text-primary" />
+                                <span className="text-sm text-muted-foreground">Загрузка...</span>
+                              </div>
+                            ) : (
+                              <div className="flex flex-col items-center gap-2">
+                                <Icon name="Upload" size={32} className="text-muted-foreground" />
+                                <span className="text-sm font-medium">Загрузить видео</span>
+                                <span className="text-xs text-muted-foreground">MP4, MOV, AVI</span>
+                              </div>
+                            )}
+                          </div>
+                          <input
+                            id={`video-upload-${video.id}`}
+                            type="file"
+                            accept="video/*"
+                            className="hidden"
+                            disabled={uploadingVideo === video.id}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleVideoUpload(video.id, file);
+                            }}
+                          />
+                        </label>
+                      </div>
+
+                      {videoUrls[video.id] && (
+                        <div className="flex items-center gap-2 text-sm text-green-600">
+                          <Icon name="CheckCircle" size={16} />
+                          <span>Видео загружено</span>
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+
+            <div className="text-center mt-8">
+              <Button onClick={() => setActiveSection('main')} size="lg" variant="outline">
+                <Icon name="ChevronLeft" size={20} className="mr-2" />
+                Вернуться
               </Button>
             </div>
           </div>
