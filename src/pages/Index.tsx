@@ -24,7 +24,6 @@ interface Video {
   youtube_url: string;
   vote_count: number;
   thumbnail?: string;
-  video_url?: string;
 }
 
 interface VotingData {
@@ -39,11 +38,6 @@ const Index = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [playingVideo, setPlayingVideo] = useState<number | null>(null);
   const [videoUrls, setVideoUrls] = useState<Record<number, string>>({});
-  const [loadingVideo, setLoadingVideo] = useState<number | null>(null);
-  const [videoProgress, setVideoProgress] = useState<Record<number, number>>({});
-  const [showAdmin, setShowAdmin] = useState(false);
-  const [uploadingVideo, setUploadingVideo] = useState<number | null>(null);
-  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
   const deviceId = generateDeviceId();
 
@@ -53,17 +47,16 @@ const Index = () => {
       const data = await response.json();
       setVotingData(data);
       
-      // Используем прокси для воспроизведения видео
-      const urls: Record<number, string> = {};
-      data.videos.forEach((video: Video) => {
-        if (video.video_url) {
-          urls[video.id] = `${VIDEO_PROXY_URL}?id=${video.id}`;
-          console.log(`Видео ${video.id}: готово к воспроизведению через прокси`);
-        } else {
-          console.log(`Видео ${video.id}: URL не найден в базе`);
+      // Получаем прямые ссылки на видео
+      data.videos.forEach(async (video: Video) => {
+        try {
+          const videoResponse = await fetch(`${VIDEO_PROXY_URL}?id=${video.id}`);
+          const videoData = await videoResponse.json();
+          setVideoUrls(prev => ({ ...prev, [video.id]: videoData.url }));
+        } catch (err) {
+          console.error(`Error fetching video ${video.id}:`, err);
         }
       });
-      setVideoUrls(urls);
     } catch (error) {
       console.error('Error fetching voting data:', error);
     }
@@ -73,14 +66,6 @@ const Index = () => {
     fetchVotingData();
     const voted = localStorage.getItem('hasVoted');
     if (voted === 'true') setHasVoted(true);
-    
-    const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.shiftKey && e.key === 'A') {
-        setShowAdmin(prev => !prev);
-      }
-    };
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
   }, []);
 
   const handleVote = async (videoChoice: number) => {
@@ -135,114 +120,6 @@ const Index = () => {
     return Math.round((votes / total) * 100);
   };
 
-  const handleYandexUrlSubmit = async (videoId: number, yandexUrl: string) => {
-    setUploadingVideo(videoId);
-
-    try {
-      const publicKey = yandexUrl.split('/').pop();
-      const directUrl = `https://cloud-api.yandex.net/v1/disk/public/resources/download?public_key=${encodeURIComponent(yandexUrl)}`;
-      
-      const response = await fetch(directUrl);
-      const data = await response.json();
-      
-      if (data.href) {
-        const videoUrl = data.href;
-        setVideoUrls(prev => ({ ...prev, [videoId]: videoUrl }));
-        localStorage.setItem(`video_${videoId}`, videoUrl);
-
-        const uploadResponse = await fetch('https://functions.poehali.dev/8d0d0014-5e4b-4a12-a934-dacbc6a832bb', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            videoId,
-            fileDataUrl: videoUrl
-          })
-        });
-
-        if (uploadResponse.ok) {
-          toast({
-            title: 'Успех!',
-            description: 'Видео добавлено и готово к воспроизведению',
-          });
-          
-          const input = document.getElementById(`yandex-url-${videoId}`) as HTMLInputElement;
-          if (input) input.value = '';
-        }
-      } else {
-        throw new Error('Не удалось получить ссылку');
-      }
-      
-      setUploadingVideo(null);
-    } catch (error) {
-      toast({
-        title: 'Ошибка',
-        description: 'Не удалось загрузить видео с Яндекс.Диска. Проверьте что ссылка публичная',
-        variant: 'destructive',
-      });
-      setUploadingVideo(null);
-    }
-  };
-
-  const handleVideoUpload = async (videoId: number, file: File) => {
-    if (!file.type.startsWith('video/')) {
-      toast({
-        title: 'Ошибка',
-        description: 'Пожалуйста, выберите видео файл',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setUploadingVideo(videoId);
-
-    try {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        try {
-          const base64Data = e.target?.result as string;
-          
-          setVideoUrls(prev => ({ ...prev, [videoId]: base64Data }));
-          localStorage.setItem(`video_${videoId}`, base64Data);
-
-          const uploadResponse = await fetch('https://functions.poehali.dev/8d0d0014-5e4b-4a12-a934-dacbc6a832bb', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              videoId,
-              fileDataUrl: base64Data
-            })
-          });
-
-          if (uploadResponse.ok) {
-            toast({
-              title: 'Успех!',
-              description: 'Видео загружено и готово к воспроизведению',
-            });
-          } else {
-            toast({
-              title: 'Предупреждение',
-              description: 'Видео сохранено локально',
-            });
-          }
-          
-          setUploadingVideo(null);
-        } catch (err) {
-          console.error('Upload error:', err);
-          setUploadingVideo(null);
-        }
-      };
-      
-      reader.readAsDataURL(file);
-    } catch (error) {
-      toast({
-        title: 'Ошибка',
-        description: 'Не удалось загрузить видео',
-        variant: 'destructive',
-      });
-      setUploadingVideo(null);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-background relative">
       <div 
@@ -253,51 +130,7 @@ const Index = () => {
       <nav className="border-b">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <h1 
-              className="text-2xl font-bold font-['Montserrat'] cursor-pointer select-none"
-              onTouchStart={() => {
-                const timer = setTimeout(() => {
-                  const newState = !showAdmin;
-                  setShowAdmin(newState);
-                  toast({
-                    title: newState ? 'Админ режим включен' : 'Админ режим выключен',
-                    description: newState ? 'Перейдите в раздел "Админ"' : ''
-                  });
-                }, 1000);
-                setLongPressTimer(timer);
-              }}
-              onTouchEnd={() => {
-                if (longPressTimer) {
-                  clearTimeout(longPressTimer);
-                  setLongPressTimer(null);
-                }
-              }}
-              onMouseDown={() => {
-                const timer = setTimeout(() => {
-                  const newState = !showAdmin;
-                  setShowAdmin(newState);
-                  toast({
-                    title: newState ? 'Админ режим включен' : 'Админ режим выключен',
-                    description: newState ? 'Перейдите в раздел "Админ"' : ''
-                  });
-                }, 1000);
-                setLongPressTimer(timer);
-              }}
-              onMouseUp={() => {
-                if (longPressTimer) {
-                  clearTimeout(longPressTimer);
-                  setLongPressTimer(null);
-                }
-              }}
-              onMouseLeave={() => {
-                if (longPressTimer) {
-                  clearTimeout(longPressTimer);
-                  setLongPressTimer(null);
-                }
-              }}
-            >
-              ПЕРЕЗАГРУЗКА БИТВА
-            </h1>
+            <h1 className="text-2xl font-bold font-['Montserrat']">ПЕРЕЗАГРУЗКА БИТВА</h1>
             <div className="flex gap-6">
               <button
                 onClick={() => setActiveSection('main')}
@@ -331,16 +164,6 @@ const Index = () => {
               >
                 О проекте
               </button>
-              {showAdmin && (
-                <button
-                  onClick={() => setActiveSection('admin')}
-                  className={`text-sm font-medium transition-colors hover:text-primary ${
-                    activeSection === 'admin' ? 'text-primary' : 'text-muted-foreground'
-                  }`}
-                >
-                  Админ
-                </button>
-              )}
             </div>
           </div>
         </div>
@@ -376,18 +199,6 @@ const Index = () => {
                           autoPlay
                           src={videoUrls[video.id]}
                           onEnded={() => setPlayingVideo(null)}
-                          onLoadStart={() => setLoadingVideo(video.id)}
-                          onCanPlay={() => setLoadingVideo(null)}
-                          onProgress={(e) => {
-                            const video = e.currentTarget;
-                            if (video.buffered.length > 0) {
-                              const bufferedEnd = video.buffered.end(video.buffered.length - 1);
-                              const duration = video.duration;
-                              if (duration > 0) {
-                                setVideoProgress(prev => ({ ...prev, [video.id]: (bufferedEnd / duration) * 100 }));
-                              }
-                            }
-                          }}
                         >
                           Ваш браузер не поддерживает воспроизведение видео.
                         </video>
@@ -413,18 +224,6 @@ const Index = () => {
                               <span className="text-lg font-medium">Воспроизвести видео</span>
                             </div>
                           )}
-                        </div>
-                      )}
-                      
-                      {loadingVideo === video.id && (
-                        <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center gap-4 z-10">
-                          <Icon name="Loader2" size={48} className="text-white animate-spin" />
-                          <div className="w-2/3 max-w-xs">
-                            <Progress value={videoProgress[video.id] || 0} className="h-2" />
-                          </div>
-                          <span className="text-white text-sm">
-                            Загрузка видео... {Math.round(videoProgress[video.id] || 0)}%
-                          </span>
                         </div>
                       )}
                     </div>
@@ -641,95 +440,6 @@ const Index = () => {
               <Button onClick={() => setActiveSection('main')} size="lg">
                 К голосованию
                 <Icon name="ChevronRight" size={20} className="ml-2" />
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {activeSection === 'admin' && showAdmin && (
-          <div className="animate-fade-in max-w-4xl mx-auto">
-            <div className="text-center mb-12">
-              <h2 className="text-4xl font-bold mb-4 font-['Montserrat']">
-                Панель администратора
-              </h2>
-              <p className="text-muted-foreground mb-2">Добавьте ссылки на видео с Яндекс.Диска</p>
-              <p className="text-xs text-muted-foreground">
-                Вставьте публичную ссылку на видео. Для выхода нажмите Ctrl+Shift+A
-              </p>
-            </div>
-
-            {votingData && (
-              <div className="grid md:grid-cols-2 gap-8">
-                {votingData.videos.map((video) => (
-                  <Card key={video.id} className="p-6">
-                    <h3 className="font-bold text-xl mb-4">{video.title}</h3>
-                    <p className="text-muted-foreground mb-6">{video.description}</p>
-                    
-                    {video.thumbnail && (
-                      <div className="mb-4">
-                        <img 
-                          src={video.thumbnail} 
-                          alt={video.title}
-                          className="w-full aspect-video object-cover rounded-lg"
-                        />
-                      </div>
-                    )}
-
-                    <div className="space-y-4">
-                      <div className="space-y-3">
-                        <input
-                          type="text"
-                          placeholder="https://disk.yandex.ru/i/..."
-                          className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                          id={`yandex-url-${video.id}`}
-                        />
-                        <Button
-                          onClick={() => {
-                            const input = document.getElementById(`yandex-url-${video.id}`) as HTMLInputElement;
-                            const url = input?.value;
-                            if (url && url.includes('disk.yandex')) {
-                              handleYandexUrlSubmit(video.id, url);
-                            } else {
-                              toast({
-                                title: 'Ошибка',
-                                description: 'Введите корректную ссылку на Яндекс.Диск',
-                                variant: 'destructive'
-                              });
-                            }
-                          }}
-                          disabled={uploadingVideo === video.id}
-                          className="w-full"
-                        >
-                          {uploadingVideo === video.id ? (
-                            <>
-                              <Icon name="Loader2" size={20} className="animate-spin mr-2" />
-                              Сохранение...
-                            </>
-                          ) : (
-                            <>
-                              <Icon name="Link" size={20} className="mr-2" />
-                              Добавить ссылку
-                            </>
-                          )}
-                        </Button>
-                      </div>
-
-                      {videoUrls[video.id] && (
-                        <div className="flex items-center gap-2 text-sm text-green-600">
-                          <Icon name="CheckCircle" size={16} />
-                          <span>Видео загружено</span>
-                        </div>
-                      )}
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            )}
-
-            <div className="text-center mt-8">
-              <Button onClick={() => setActiveSection('main')} size="lg" variant="outline">
-                <Icon name="ChevronLeft" size={20} className="mr-2" />
-                Вернуться
               </Button>
             </div>
           </div>
