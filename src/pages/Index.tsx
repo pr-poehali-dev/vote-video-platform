@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import Icon from '@/components/ui/icon';
 
 const API_URL = 'https://functions.poehali.dev/bde3e8c7-a00c-481b-961f-bcd36e62e805';
+const VIDEO_PROXY_URL = 'https://functions.poehali.dev/b04bef60-8902-445f-a44e-c950dfa80094';
 
 const generateDeviceId = () => {
   const stored = localStorage.getItem('deviceId');
@@ -35,6 +36,8 @@ const Index = () => {
   const [votingData, setVotingData] = useState<VotingData | null>(null);
   const [hasVoted, setHasVoted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [playingVideo, setPlayingVideo] = useState<number | null>(null);
+  const [videoUrls, setVideoUrls] = useState<Record<number, string>>({});
   const { toast } = useToast();
   const deviceId = generateDeviceId();
 
@@ -43,6 +46,17 @@ const Index = () => {
       const response = await fetch(API_URL);
       const data = await response.json();
       setVotingData(data);
+      
+      // Получаем прямые ссылки на видео
+      data.videos.forEach(async (video: Video) => {
+        try {
+          const videoResponse = await fetch(`${VIDEO_PROXY_URL}?id=${video.id}`);
+          const videoData = await videoResponse.json();
+          setVideoUrls(prev => ({ ...prev, [video.id]: videoData.url }));
+        } catch (err) {
+          console.error(`Error fetching video ${video.id}:`, err);
+        }
+      });
     } catch (error) {
       console.error('Error fetching voting data:', error);
     }
@@ -177,32 +191,41 @@ const Index = () => {
                     key={video.id}
                     className="overflow-hidden hover-scale transition-all"
                   >
-                    <div className="aspect-video bg-muted rounded-t-lg overflow-hidden relative group">
-                      <a
-                        href={video.youtube_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-full h-full flex items-center justify-center relative"
-                      >
-                        {video.thumbnail ? (
-                          <>
-                            <img 
-                              src={video.thumbnail} 
-                              alt={video.title}
-                              className="w-full h-full object-cover"
-                            />
-                            <div className="absolute inset-0 bg-black/40 group-hover:bg-black/60 transition-colors flex items-center justify-center">
-                              <Icon name="Play" size={64} className="text-white group-hover:scale-110 transition-transform" />
+                    <div className="aspect-video bg-black rounded-t-lg overflow-hidden relative group">
+                      {playingVideo === video.id && videoUrls[video.id] ? (
+                        <video
+                          className="w-full h-full object-contain"
+                          controls
+                          autoPlay
+                          src={videoUrls[video.id]}
+                          onEnded={() => setPlayingVideo(null)}
+                        >
+                          Ваш браузер не поддерживает воспроизведение видео.
+                        </video>
+                      ) : (
+                        <div 
+                          onClick={() => setPlayingVideo(video.id)}
+                          className="w-full h-full flex items-center justify-center relative cursor-pointer"
+                        >
+                          {video.thumbnail ? (
+                            <>
+                              <img 
+                                src={video.thumbnail} 
+                                alt={video.title}
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute inset-0 bg-black/40 group-hover:bg-black/60 transition-colors flex items-center justify-center">
+                                <Icon name="Play" size={64} className="text-white group-hover:scale-110 transition-transform" />
+                              </div>
+                            </>
+                          ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center gap-4">
+                              <Icon name="Play" size={64} className="text-primary group-hover:scale-110 transition-transform" />
+                              <span className="text-lg font-medium">Воспроизвести видео</span>
                             </div>
-                          </>
-                        ) : (
-                          <div className="w-full h-full flex flex-col items-center justify-center gap-4">
-                            <Icon name="Play" size={64} className="text-primary group-hover:scale-110 transition-transform" />
-                            <span className="text-lg font-medium">Открыть видео {video.id}</span>
-                            <span className="text-sm text-muted-foreground">Нажмите, чтобы посмотреть</span>
-                          </div>
-                        )}
-                      </a>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <div className="p-6">
                       <h3 className="text-2xl font-bold mb-2 font-['Montserrat']">
