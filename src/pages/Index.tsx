@@ -156,6 +156,9 @@ const Index = () => {
               <h2 className="text-5xl font-bold mb-4 font-['Montserrat'] tracking-tight">
                 ПЕРЕЗАГРУЗКА БИТВА
               </h2>
+              <p className="text-xl font-medium mb-2">
+                Кто станет мастером преображения
+              </p>
               <p className="text-muted-foreground text-lg">
                 Посмотрите оба видео и проголосуйте за понравившееся
               </p>
