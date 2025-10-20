@@ -150,44 +150,38 @@ const Index = () => {
     try {
       const reader = new FileReader();
       reader.onload = async (e) => {
-        const base64Data = e.target?.result as string;
-        
-        const response = await fetch('https://functions.poehali.dev/b06487d8-a6b7-4427-92ac-06942f039823', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            file: base64Data,
-            fileName: file.name
-          })
-        });
-
-        const data = await response.json();
-
-        if (response.ok && data.success) {
-          const videoUrl = data.url;
-          setVideoUrls(prev => ({ ...prev, [videoId]: videoUrl }));
-          localStorage.setItem(`video_${videoId}`, videoUrl);
+        try {
+          const base64Data = e.target?.result as string;
+          
+          setVideoUrls(prev => ({ ...prev, [videoId]: base64Data }));
+          localStorage.setItem(`video_${videoId}`, base64Data);
 
           const uploadResponse = await fetch('https://functions.poehali.dev/ec3697a9-82b5-41ec-9e8f-54283bc7017c', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               videoId,
-              videoUrl
+              videoUrl: base64Data
             })
           });
 
           if (uploadResponse.ok) {
             toast({
               title: 'Успех!',
-              description: 'Видео загружено и сохранено',
+              description: 'Видео загружено и готово к воспроизведению',
+            });
+          } else {
+            toast({
+              title: 'Предупреждение',
+              description: 'Видео сохранено локально',
             });
           }
-        } else {
-          throw new Error(data.error || 'Upload failed');
+          
+          setUploadingVideo(null);
+        } catch (err) {
+          console.error('Upload error:', err);
+          setUploadingVideo(null);
         }
-        
-        setUploadingVideo(null);
       };
       
       reader.readAsDataURL(file);
