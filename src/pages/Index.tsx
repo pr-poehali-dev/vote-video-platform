@@ -22,6 +22,7 @@ interface Video {
   description: string;
   youtube_url: string;
   vote_count: number;
+  thumbnail?: string;
 }
 
 interface VotingData {
@@ -176,16 +177,31 @@ const Index = () => {
                     key={video.id}
                     className="overflow-hidden hover-scale transition-all"
                   >
-                    <div className="aspect-video bg-muted rounded-t-lg overflow-hidden flex items-center justify-center">
+                    <div className="aspect-video bg-muted rounded-t-lg overflow-hidden relative group">
                       <a
                         href={video.youtube_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="w-full h-full flex flex-col items-center justify-center gap-4 hover:bg-muted/50 transition-colors group"
+                        className="w-full h-full flex items-center justify-center relative"
                       >
-                        <Icon name="Play" size={64} className="text-primary group-hover:scale-110 transition-transform" />
-                        <span className="text-lg font-medium">Открыть видео {video.id}</span>
-                        <span className="text-sm text-muted-foreground">Нажмите, чтобы посмотреть</span>
+                        {video.thumbnail ? (
+                          <>
+                            <img 
+                              src={video.thumbnail} 
+                              alt={video.title}
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-black/40 group-hover:bg-black/60 transition-colors flex items-center justify-center">
+                              <Icon name="Play" size={64} className="text-white group-hover:scale-110 transition-transform" />
+                            </div>
+                          </>
+                        ) : (
+                          <div className="w-full h-full flex flex-col items-center justify-center gap-4">
+                            <Icon name="Play" size={64} className="text-primary group-hover:scale-110 transition-transform" />
+                            <span className="text-lg font-medium">Открыть видео {video.id}</span>
+                            <span className="text-sm text-muted-foreground">Нажмите, чтобы посмотреть</span>
+                          </div>
+                        )}
                       </a>
                     </div>
                     <div className="p-6">

@@ -35,7 +35,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         if method == 'GET':
             # Get voting statistics
             cur.execute("""
-                SELECT id, title, description, youtube_url, 
+                SELECT id, title, description, youtube_url, thumbnail,
                        (SELECT COUNT(*) FROM votes WHERE video_choice = videos.id) as vote_count
                 FROM videos
                 ORDER BY id
@@ -49,11 +49,12 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                         'title': v[1],
                         'description': v[2],
                         'youtube_url': v[3],
-                        'vote_count': v[4]
+                        'thumbnail': v[4],
+                        'vote_count': v[5]
                     }
                     for v in videos
                 ],
-                'total_votes': sum(v[4] for v in videos)
+                'total_votes': sum(v[5] for v in videos)
             }
             
             return {
