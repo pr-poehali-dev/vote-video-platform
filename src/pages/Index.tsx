@@ -110,7 +110,7 @@ const Index = () => {
       <nav className="border-b">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold font-['Montserrat']">Голосование</h1>
+            <h1 className="text-2xl font-bold font-['Montserrat']">ПЕРЕЗАГРУЗКА БИТВА</h1>
             <div className="flex gap-6">
               <button
                 onClick={() => setActiveSection('main')}
@@ -153,8 +153,8 @@ const Index = () => {
         {activeSection === 'main' && (
           <div className="animate-fade-in">
             <div className="text-center mb-12">
-              <h2 className="text-4xl font-bold mb-4 font-['Montserrat']">
-                Выберите лучшее видео
+              <h2 className="text-5xl font-bold mb-4 font-['Montserrat'] tracking-tight">
+                ПЕРЕЗАГРУЗКА БИТВА
               </h2>
               <p className="text-muted-foreground text-lg">
                 Посмотрите оба видео и проголосуйте за понравившееся
