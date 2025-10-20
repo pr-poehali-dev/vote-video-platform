@@ -196,7 +196,7 @@ const Index = () => {
                       <Button
                         onClick={() => handleVote(video.id)}
                         disabled={hasVoted || isLoading}
-                        className="w-full bg-primary hover:bg-primary/90 text-white font-bold text-lg py-6 shadow-lg hover:shadow-xl transition-all hover:scale-105"
+                        className={`w-full bg-primary hover:bg-primary/90 text-white font-bold text-lg py-6 shadow-lg hover:shadow-xl transition-all hover:scale-105 ${!hasVoted && !isLoading ? 'animate-pulse' : ''}`}
                         size="lg"
                       >
                         {hasVoted ? (
