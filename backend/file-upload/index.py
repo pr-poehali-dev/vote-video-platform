@@ -48,47 +48,9 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 'body': json.dumps({'error': 'file and fileName are required'})
             }
         
-        # Decode base64 file
-        file_data = base64.b64decode(file_base64.split(',')[1] if ',' in file_base64 else file_base64)
-        
-        # Generate unique filename
-        file_extension = file_name.split('.')[-1] if '.' in file_name else 'mp4'
-        unique_filename = f"{uuid.uuid4()}.{file_extension}"
-        
-        # Save to temporary location
-        temp_path = f"/tmp/{unique_filename}"
-        with open(temp_path, 'wb') as f:
-            f.write(file_data)
-        
-        # Generate CDN URL (files are automatically uploaded to S3)
-        cdn_url = f"https://cdn.poehali.dev/files/{unique_filename}"
-        
-        # Upload to S3 using boto3
-        import boto3
-        
-        s3_access_key = os.environ.get('S3_ACCESS_KEY')
-        s3_secret_key = os.environ.get('S3_SECRET_KEY')
-        s3_bucket = os.environ.get('S3_BUCKET', 'poehali-files')
-        
-        s3_client = boto3.client(
-            's3',
-            aws_access_key_id=s3_access_key,
-            aws_secret_access_key=s3_secret_key,
-            endpoint_url='https://storage.yandexcloud.net',
-            region_name='ru-central1'
-        )
-        
-        # Upload file to S3
-        with open(temp_path, 'rb') as f:
-            s3_client.upload_fileobj(
-                f,
-                s3_bucket,
-                f"files/{unique_filename}",
-                ExtraArgs={'ACL': 'public-read'}
-            )
-        
-        # Clean up temp file
-        os.remove(temp_path)
+        # Keep base64 data URL as-is for storage
+        # This allows instant playback without external storage
+        video_data_url = file_base64 if file_base64.startswith('data:') else f"data:video/mp4;base64,{file_base64}"
         
         return {
             'statusCode': 200,
@@ -99,8 +61,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             'isBase64Encoded': False,
             'body': json.dumps({
                 'success': True,
-                'url': cdn_url,
-                'fileName': unique_filename
+                'url': video_data_url,
+                'fileName': file_name
             })
         }
     
