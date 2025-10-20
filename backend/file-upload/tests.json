@@ -1,0 +1,20 @@
+{
+  "tests": [
+    {
+      "name": "Test file upload with base64",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "file": "data:video/mp4;base64,AAAAIGZ0eXBpc29t",
+        "fileName": "test.mp4"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "success": true,
+        "url": "string",
+        "fileName": "string"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
