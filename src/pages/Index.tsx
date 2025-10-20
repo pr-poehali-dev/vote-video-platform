@@ -106,7 +106,12 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background relative">
+      <div 
+        className="fixed inset-0 bg-cover bg-center bg-no-repeat opacity-20 -z-10"
+        style={{ backgroundImage: 'url(https://cdn.poehali.dev/files/e15f8101-7ee9-42a0-9ecc-1cf9a643afff.jpeg)' }}
+      />
+      <div className="fixed inset-0 bg-background/80 -z-10" />
       <nav className="border-b">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
