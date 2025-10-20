@@ -183,12 +183,13 @@ const Index = () => {
               className="text-2xl font-bold font-['Montserrat'] cursor-pointer select-none"
               onTouchStart={() => {
                 const timer = setTimeout(() => {
-                  setShowAdmin(prev => !prev);
+                  const newState = !showAdmin;
+                  setShowAdmin(newState);
                   toast({
-                    title: showAdmin ? 'Админ режим выключен' : 'Админ режим включен',
-                    description: showAdmin ? '' : 'Перейдите в раздел "Админ"'
+                    title: newState ? 'Админ режим включен' : 'Админ режим выключен',
+                    description: newState ? 'Перейдите в раздел "Админ"' : ''
                   });
-                }, 2000);
+                }, 1000);
                 setLongPressTimer(timer);
               }}
               onTouchEnd={() => {
@@ -199,12 +200,13 @@ const Index = () => {
               }}
               onMouseDown={() => {
                 const timer = setTimeout(() => {
-                  setShowAdmin(prev => !prev);
+                  const newState = !showAdmin;
+                  setShowAdmin(newState);
                   toast({
-                    title: showAdmin ? 'Админ режим выключен' : 'Админ режим включен',
-                    description: showAdmin ? '' : 'Перейдите в раздел "Админ"'
+                    title: newState ? 'Админ режим включен' : 'Админ режим выключен',
+                    description: newState ? 'Перейдите в раздел "Админ"' : ''
                   });
-                }, 2000);
+                }, 1000);
                 setLongPressTimer(timer);
               }}
               onMouseUp={() => {
