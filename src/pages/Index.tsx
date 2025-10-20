@@ -24,6 +24,7 @@ interface Video {
   youtube_url: string;
   vote_count: number;
   thumbnail?: string;
+  video_url?: string;
 }
 
 interface VotingData {
@@ -51,16 +52,17 @@ const Index = () => {
       const data = await response.json();
       setVotingData(data);
       
-      // Получаем прямые ссылки на видео
-      data.videos.forEach(async (video: Video) => {
-        try {
-          const videoResponse = await fetch(`${VIDEO_PROXY_URL}?id=${video.id}`);
-          const videoData = await videoResponse.json();
-          setVideoUrls(prev => ({ ...prev, [video.id]: videoData.url }));
-        } catch (err) {
-          console.error(`Error fetching video ${video.id}:`, err);
+      // Используем video_url из базы данных или localStorage
+      const urls: Record<number, string> = {};
+      data.videos.forEach((video: Video) => {
+        const localVideo = localStorage.getItem(`video_${video.id}`);
+        if (localVideo) {
+          urls[video.id] = localVideo;
+        } else if (video.video_url) {
+          urls[video.id] = video.video_url;
         }
       });
+      setVideoUrls(urls);
     } catch (error) {
       console.error('Error fetching voting data:', error);
     }
@@ -143,32 +145,25 @@ const Index = () => {
     }
 
     setUploadingVideo(videoId);
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('videoId', videoId.toString());
 
     try {
-      const response = await fetch(`${API_URL}/upload`, {
-        method: 'POST',
-        body: formData,
+      const videoUrl = URL.createObjectURL(file);
+      setVideoUrls(prev => ({ ...prev, [videoId]: videoUrl }));
+      
+      localStorage.setItem(`video_${videoId}`, videoUrl);
+      
+      toast({
+        title: 'Успех!',
+        description: 'Видео загружено и готово к воспроизведению',
       });
-
-      if (response.ok) {
-        toast({
-          title: 'Успех!',
-          description: 'Видео успешно загружено',
-        });
-        await fetchVotingData();
-      } else {
-        throw new Error('Upload failed');
-      }
+      
+      setUploadingVideo(null);
     } catch (error) {
       toast({
         title: 'Ошибка',
         description: 'Не удалось загрузить видео',
         variant: 'destructive',
       });
-    } finally {
       setUploadingVideo(null);
     }
   };
@@ -538,7 +533,10 @@ const Index = () => {
               <h2 className="text-4xl font-bold mb-4 font-['Montserrat']">
                 Панель администратора
               </h2>
-              <p className="text-muted-foreground">Загрузите видео файлы для голосования</p>
+              <p className="text-muted-foreground mb-2">Загрузите видео файлы для голосования</p>
+              <p className="text-xs text-muted-foreground">
+                Видео сохраняется в памяти браузера. Для выхода нажмите Ctrl+Shift+A
+              </p>
             </div>
 
             {votingData && (
