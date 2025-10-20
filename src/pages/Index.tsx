@@ -168,16 +168,15 @@ const Index = () => {
                     key={video.id}
                     className="overflow-hidden hover-scale transition-all"
                   >
-                    <div className="aspect-video bg-muted">
-                      <iframe
-                        width="100%"
-                        height="100%"
-                        src={video.youtube_url}
-                        title={video.title}
-                        frameBorder="0"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                      />
+                    <div className="aspect-video bg-muted rounded-t-lg overflow-hidden">
+                      <video
+                        className="w-full h-full object-cover"
+                        controls
+                        preload="metadata"
+                      >
+                        <source src={video.youtube_url} type="video/mp4" />
+                        Ваш браузер не поддерживает воспроизведение видео.
+                      </video>
                     </div>
                     <div className="p-6">
                       <h3 className="text-2xl font-bold mb-2 font-['Montserrat']">
