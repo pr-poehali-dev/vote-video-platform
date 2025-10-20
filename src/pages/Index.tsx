@@ -53,18 +53,14 @@ const Index = () => {
       const data = await response.json();
       setVotingData(data);
       
-      // Используем video_url из базы данных или localStorage
+      // Используем прокси для воспроизведения видео
       const urls: Record<number, string> = {};
       data.videos.forEach((video: Video) => {
-        const localVideo = localStorage.getItem(`video_${video.id}`);
-        if (localVideo) {
-          console.log(`Видео ${video.id}: загружено из localStorage (${localVideo.length} символов)`);
-          urls[video.id] = localVideo;
-        } else if (video.video_url) {
-          console.log(`Видео ${video.id}: загружено из базы данных (${video.video_url.length} символов)`);
-          urls[video.id] = video.video_url;
+        if (video.video_url) {
+          urls[video.id] = `${VIDEO_PROXY_URL}?id=${video.id}`;
+          console.log(`Видео ${video.id}: готово к воспроизведению через прокси`);
         } else {
-          console.log(`Видео ${video.id}: URL не найден`);
+          console.log(`Видео ${video.id}: URL не найден в базе`);
         }
       });
       setVideoUrls(urls);

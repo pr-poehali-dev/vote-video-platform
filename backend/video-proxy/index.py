@@ -1,36 +1,13 @@
 '''
-Business: Получение прямых ссылок для воспроизведения видео с Яндекс.Диска
-Args: event - dict с httpMethod, queryStringParameters (id)
+Business: Проксирование видео с Яндекс.Диска для корректного воспроизведения
+Args: event - dict с httpMethod, queryStringParameters (url)
       context - объект с атрибутами request_id
-Returns: HTTP response с прямой ссылкой на видео
+Returns: HTTP response с видео-стримом или редирект
 '''
 import json
-import re
+import os
 from typing import Dict, Any
-import urllib.request
-import urllib.parse
-
-def get_direct_link(public_url: str) -> str:
-    """Получает прямую ссылку для скачивания с Яндекс.Диска"""
-    try:
-        # Извлекаем hash из публичной ссылки
-        if '/i/' in public_url:
-            hash_key = public_url.split('/i/')[-1]
-        elif '/d/' in public_url:
-            hash_key = public_url.split('/d/')[-1]
-        else:
-            return ''
-        
-        # Яндекс.Диск API для получения информации о публичном файле
-        api_url = f'https://cloud-api.yandex.net/v1/disk/public/resources/download?public_key={urllib.parse.quote(public_url)}'
-        
-        req = urllib.request.Request(api_url)
-        with urllib.request.urlopen(req, timeout=10) as response:
-            data = json.loads(response.read().decode())
-            return data.get('href', '')
-    except Exception as e:
-        # Если API не работает, формируем прямую ссылку вручную
-        return f'https://downloader.disk.yandex.ru/disk/public/?public_key={urllib.parse.quote(public_url)}'
+import psycopg2
 
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     method: str = event.get('httpMethod', 'GET')
@@ -49,14 +26,21 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     
     if method == 'GET':
         params = event.get('queryStringParameters', {})
-        video_id = params.get('id', '')
+        video_id_str = params.get('id', '')
         
-        video_urls = {
-            '1': 'https://disk.yandex.ru/i/jvzaF36uOEXAYQ',
-            '2': 'https://disk.yandex.ru/i/MduqiNnVit8s2Q'
-        }
+        if not video_id_str:
+            return {
+                'statusCode': 400,
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                },
+                'body': json.dumps({'error': 'Video ID required'})
+            }
         
-        if video_id not in video_urls:
+        try:
+            video_id = int(video_id_str)
+        except ValueError:
             return {
                 'statusCode': 400,
                 'headers': {
@@ -66,20 +50,36 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 'body': json.dumps({'error': 'Invalid video ID'})
             }
         
-        yandex_url = video_urls[video_id]
-        direct_link = get_direct_link(yandex_url)
+        database_url = os.environ.get('DATABASE_URL')
+        conn = psycopg2.connect(database_url)
+        cur = conn.cursor()
+        
+        cur.execute("SELECT video_url FROM videos WHERE id = %s", (video_id,))
+        result = cur.fetchone()
+        
+        cur.close()
+        conn.close()
+        
+        if not result or not result[0]:
+            return {
+                'statusCode': 404,
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                },
+                'body': json.dumps({'error': 'Video not found'})
+            }
+        
+        video_url = result[0]
         
         return {
-            'statusCode': 200,
+            'statusCode': 302,
             'headers': {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
+                'Location': video_url,
+                'Access-Control-Allow-Origin': '*',
+                'Cache-Control': 'no-cache'
             },
-            'isBase64Encoded': False,
-            'body': json.dumps({
-                'url': direct_link if direct_link else yandex_url,
-                'video_id': video_id
-            })
+            'body': ''
         }
     
     return {
