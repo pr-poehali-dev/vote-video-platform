@@ -38,6 +38,8 @@ const Index = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [playingVideo, setPlayingVideo] = useState<number | null>(null);
   const [videoUrls, setVideoUrls] = useState<Record<number, string>>({});
+  const [loadingVideo, setLoadingVideo] = useState<number | null>(null);
+  const [videoProgress, setVideoProgress] = useState<Record<number, number>>({});
   const { toast } = useToast();
   const deviceId = generateDeviceId();
 
@@ -199,6 +201,18 @@ const Index = () => {
                           autoPlay
                           src={videoUrls[video.id]}
                           onEnded={() => setPlayingVideo(null)}
+                          onLoadStart={() => setLoadingVideo(video.id)}
+                          onCanPlay={() => setLoadingVideo(null)}
+                          onProgress={(e) => {
+                            const video = e.currentTarget;
+                            if (video.buffered.length > 0) {
+                              const bufferedEnd = video.buffered.end(video.buffered.length - 1);
+                              const duration = video.duration;
+                              if (duration > 0) {
+                                setVideoProgress(prev => ({ ...prev, [video.id]: (bufferedEnd / duration) * 100 }));
+                              }
+                            }
+                          }}
                         >
                           Ваш браузер не поддерживает воспроизведение видео.
                         </video>
@@ -224,6 +238,18 @@ const Index = () => {
                               <span className="text-lg font-medium">Воспроизвести видео</span>
                             </div>
                           )}
+                        </div>
+                      )}
+                      
+                      {loadingVideo === video.id && (
+                        <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center gap-4 z-10">
+                          <Icon name="Loader2" size={48} className="text-white animate-spin" />
+                          <div className="w-2/3 max-w-xs">
+                            <Progress value={videoProgress[video.id] || 0} className="h-2" />
+                          </div>
+                          <span className="text-white text-sm">
+                            Загрузка видео... {Math.round(videoProgress[video.id] || 0)}%
+                          </span>
                         </div>
                       )}
                     </div>
