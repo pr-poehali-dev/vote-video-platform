@@ -43,6 +43,7 @@ const Index = () => {
   const [videoProgress, setVideoProgress] = useState<Record<number, number>>({});
   const [showAdmin, setShowAdmin] = useState(false);
   const [uploadingVideo, setUploadingVideo] = useState<number | null>(null);
+  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
   const deviceId = generateDeviceId();
 
@@ -178,7 +179,49 @@ const Index = () => {
       <nav className="border-b">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold font-['Montserrat']">ПЕРЕЗАГРУЗКА БИТВА</h1>
+            <h1 
+              className="text-2xl font-bold font-['Montserrat'] cursor-pointer select-none"
+              onTouchStart={() => {
+                const timer = setTimeout(() => {
+                  setShowAdmin(prev => !prev);
+                  toast({
+                    title: showAdmin ? 'Админ режим выключен' : 'Админ режим включен',
+                    description: showAdmin ? '' : 'Перейдите в раздел "Админ"'
+                  });
+                }, 2000);
+                setLongPressTimer(timer);
+              }}
+              onTouchEnd={() => {
+                if (longPressTimer) {
+                  clearTimeout(longPressTimer);
+                  setLongPressTimer(null);
+                }
+              }}
+              onMouseDown={() => {
+                const timer = setTimeout(() => {
+                  setShowAdmin(prev => !prev);
+                  toast({
+                    title: showAdmin ? 'Админ режим выключен' : 'Админ режим включен',
+                    description: showAdmin ? '' : 'Перейдите в раздел "Админ"'
+                  });
+                }, 2000);
+                setLongPressTimer(timer);
+              }}
+              onMouseUp={() => {
+                if (longPressTimer) {
+                  clearTimeout(longPressTimer);
+                  setLongPressTimer(null);
+                }
+              }}
+              onMouseLeave={() => {
+                if (longPressTimer) {
+                  clearTimeout(longPressTimer);
+                  setLongPressTimer(null);
+                }
+              }}
+            >
+              ПЕРЕЗАГРУЗКА БИТВА
+            </h1>
             <div className="flex gap-6">
               <button
                 onClick={() => setActiveSection('main')}
