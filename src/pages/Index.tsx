@@ -139,6 +139,54 @@ const Index = () => {
     return Math.round((votes / total) * 100);
   };
 
+  const handleYandexUrlSubmit = async (videoId: number, yandexUrl: string) => {
+    setUploadingVideo(videoId);
+
+    try {
+      const publicKey = yandexUrl.split('/').pop();
+      const directUrl = `https://cloud-api.yandex.net/v1/disk/public/resources/download?public_key=${encodeURIComponent(yandexUrl)}`;
+      
+      const response = await fetch(directUrl);
+      const data = await response.json();
+      
+      if (data.href) {
+        const videoUrl = data.href;
+        setVideoUrls(prev => ({ ...prev, [videoId]: videoUrl }));
+        localStorage.setItem(`video_${videoId}`, videoUrl);
+
+        const uploadResponse = await fetch('https://functions.poehali.dev/8d0d0014-5e4b-4a12-a934-dacbc6a832bb', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            videoId,
+            fileDataUrl: videoUrl
+          })
+        });
+
+        if (uploadResponse.ok) {
+          toast({
+            title: 'Успех!',
+            description: 'Видео добавлено и готово к воспроизведению',
+          });
+          
+          const input = document.getElementById(`yandex-url-${videoId}`) as HTMLInputElement;
+          if (input) input.value = '';
+        }
+      } else {
+        throw new Error('Не удалось получить ссылку');
+      }
+      
+      setUploadingVideo(null);
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось загрузить видео с Яндекс.Диска. Проверьте что ссылка публичная',
+        variant: 'destructive',
+      });
+      setUploadingVideo(null);
+    }
+  };
+
   const handleVideoUpload = async (videoId: number, file: File) => {
     if (!file.type.startsWith('video/')) {
       toast({
@@ -608,9 +656,9 @@ const Index = () => {
               <h2 className="text-4xl font-bold mb-4 font-['Montserrat']">
                 Панель администратора
               </h2>
-              <p className="text-muted-foreground mb-2">Загрузите видео файлы для голосования</p>
+              <p className="text-muted-foreground mb-2">Добавьте ссылки на видео с Яндекс.Диска</p>
               <p className="text-xs text-muted-foreground">
-                Видео сохраняется в памяти браузера. Для выхода нажмите Ctrl+Shift+A
+                Вставьте публичную ссылку на видео. Для выхода нажмите Ctrl+Shift+A
               </p>
             </div>
 
@@ -632,41 +680,42 @@ const Index = () => {
                     )}
 
                     <div className="space-y-4">
-                      <div>
-                        <label 
-                          htmlFor={`video-upload-${video.id}`}
-                          className="block w-full cursor-pointer"
+                      <div className="space-y-3">
+                        <input
+                          type="text"
+                          placeholder="https://disk.yandex.ru/i/..."
+                          className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                          id={`yandex-url-${video.id}`}
+                        />
+                        <Button
+                          onClick={() => {
+                            const input = document.getElementById(`yandex-url-${video.id}`) as HTMLInputElement;
+                            const url = input?.value;
+                            if (url && url.includes('disk.yandex')) {
+                              handleYandexUrlSubmit(video.id, url);
+                            } else {
+                              toast({
+                                title: 'Ошибка',
+                                description: 'Введите корректную ссылку на Яндекс.Диск',
+                                variant: 'destructive'
+                              });
+                            }
+                          }}
+                          disabled={uploadingVideo === video.id}
+                          className="w-full"
                         >
-                          <div className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-                            uploadingVideo === video.id 
-                              ? 'border-primary bg-primary/5' 
-                              : 'border-muted hover:border-primary'
-                          }`}>
-                            {uploadingVideo === video.id ? (
-                              <div className="flex flex-col items-center gap-2">
-                                <Icon name="Loader2" size={32} className="animate-spin text-primary" />
-                                <span className="text-sm text-muted-foreground">Загрузка...</span>
-                              </div>
-                            ) : (
-                              <div className="flex flex-col items-center gap-2">
-                                <Icon name="Upload" size={32} className="text-muted-foreground" />
-                                <span className="text-sm font-medium">Загрузить видео</span>
-                                <span className="text-xs text-muted-foreground">MP4, MOV, AVI</span>
-                              </div>
-                            )}
-                          </div>
-                          <input
-                            id={`video-upload-${video.id}`}
-                            type="file"
-                            accept="video/*"
-                            className="hidden"
-                            disabled={uploadingVideo === video.id}
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) handleVideoUpload(video.id, file);
-                            }}
-                          />
-                        </label>
+                          {uploadingVideo === video.id ? (
+                            <>
+                              <Icon name="Loader2" size={20} className="animate-spin mr-2" />
+                              Сохранение...
+                            </>
+                          ) : (
+                            <>
+                              <Icon name="Link" size={20} className="mr-2" />
+                              Добавить ссылку
+                            </>
+                          )}
+                        </Button>
                       </div>
 
                       {videoUrls[video.id] && (
