@@ -108,10 +108,10 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background relative">
       <div 
-        className="fixed inset-0 bg-cover bg-center bg-no-repeat opacity-20 -z-10"
+        className="fixed inset-0 bg-cover bg-center bg-no-repeat opacity-40 -z-10"
         style={{ backgroundImage: 'url(https://cdn.poehali.dev/files/e15f8101-7ee9-42a0-9ecc-1cf9a643afff.jpeg)' }}
       />
-      <div className="fixed inset-0 bg-background/80 -z-10" />
+      <div className="fixed inset-0 bg-gradient-to-b from-primary/20 via-background/50 to-background/80 -z-10" />
       <nav className="border-b">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -176,15 +176,17 @@ const Index = () => {
                     key={video.id}
                     className="overflow-hidden hover-scale transition-all"
                   >
-                    <div className="aspect-video bg-muted rounded-t-lg overflow-hidden">
-                      <video
-                        className="w-full h-full object-cover"
-                        controls
-                        preload="metadata"
+                    <div className="aspect-video bg-muted rounded-t-lg overflow-hidden flex items-center justify-center">
+                      <a
+                        href={video.youtube_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full h-full flex flex-col items-center justify-center gap-4 hover:bg-muted/50 transition-colors group"
                       >
-                        <source src={video.youtube_url} type="video/mp4" />
-                        Ваш браузер не поддерживает воспроизведение видео.
-                      </video>
+                        <Icon name="Play" size={64} className="text-primary group-hover:scale-110 transition-transform" />
+                        <span className="text-lg font-medium">Открыть видео {video.id}</span>
+                        <span className="text-sm text-muted-foreground">Нажмите, чтобы посмотреть</span>
+                      </a>
                     </div>
                     <div className="p-6">
                       <h3 className="text-2xl font-bold mb-2 font-['Montserrat']">

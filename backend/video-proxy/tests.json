@@ -1,0 +1,11 @@
+{
+  "tests": [
+    {
+      "name": "Get video 1 URL",
+      "method": "GET",
+      "path": "/?id=1",
+      "expectedStatus": 200,
+      "bodyMatcher": "partial"
+    }
+  ]
+}
